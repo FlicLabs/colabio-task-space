@@ -1,5 +1,16 @@
 # Working with this task space
 
+## Default: customize INSIDE Colabio
+
+For personal customization, read `HOSTED.md` and start from `hosted-view.html`.
+Produce one self-contained HTML file with inline CSS/JS. The person can preview
+and apply it under Tasks → Make it yours. If the bridge is connected, use
+`view-apply --org ORG_ID --project PROJECT_ID --html-file my-view.html` to publish
+only to their own account. `view-show` reads their current view and `view-reset`
+restores the default. Do not run `serve` or build a separate app unless the person
+explicitly asks for the optional standalone version. View changes are personal;
+task edits remain shared and use Colabio's existing task controls.
+
 This folder is an independent MIT-licensed part of Colabio. The rest of the Colabio
 application is not covered by this license. Change the layout, cards, grouping,
 filters, interaction and styling freely in your own app. `src/layout.tsx` accepts

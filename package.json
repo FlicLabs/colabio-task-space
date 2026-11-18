@@ -1,6 +1,6 @@
 {
   "name": "@colabio/task-space",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Customizable task views and a local coding-agent bridge for Colabio",
   "type": "module",
   "license": "MIT",
@@ -10,10 +10,13 @@
   "scripts": { "test": "node --test tests/*.test.mjs" },
   "exports": {
     "./clarity": "./src/clarity.ts",
-    "./layout": "./src/layout.tsx"
+    "./layout": "./src/layout.tsx",
+    "./hosted": "./src/hosted.ts",
+    "./hosted-frame": "./hosted-frame.mjs"
   },
   "bin": { "colabio-task": "./agent.mjs" },
   "peerDependencies": { "react": ">=18" },
+  "dependencies": { "zod": "^3.24.1" },
   "engines": { "node": ">=22" },
-  "files": ["src", "agent.mjs", "personal-space.mjs", "web", "AGENTS.md", "README.md", "LICENSE", "examples"]
+  "files": ["src", "agent.mjs", "hosted-frame.mjs", "hosted-view.html", "HOSTED.md", "personal-space.mjs", "web", "AGENTS.md", "README.md", "LICENSE", "examples"]
 }

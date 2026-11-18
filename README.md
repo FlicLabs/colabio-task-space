@@ -7,7 +7,19 @@ applies only to this folder.
 Public source: [FlicLabs/colabio-task-space](https://github.com/FlicLabs/colabio-task-space).
 Fork it, download it, or give your own copy to your coding agent.
 
-## Run your own version
+## Customize inside Colabio
+
+Open **Tasks → Make it yours → Copy agent instructions**. Ask your agent for a
+single HTML view, then upload, preview and apply it on that same page. Your view
+runs inside Colabio and is saved to your own account in the organization across
+browsers. No separate local app is required. Teammates keep their own interfaces.
+
+A connected agent can also publish directly with the `view-apply` command in
+bridge version 0.2.0+. See [the hosted customization guide](HOSTED.md) and
+[`hosted-view.html`](hosted-view.html) for the complete contract and starter.
+Task edits continue through Colabio's regular controls on the shared board.
+
+## Optional standalone local version
 
 Node 22 or later is required. The personal task space and bridge need no npm
 dependencies and no AI API key.
@@ -58,9 +70,10 @@ and no checklist; this is a conversation starter, not a time limit. Suggestions
 are optional: recurring work is valid, completed work is excluded, and
 nothing changes tasks, time, reports or scores automatically.
 
-Custom code runs in your own app. Downloading a fork does not install executable
-code into the hosted Colabio site. To contribute a change to the hosted view,
-submit the source for review through your organization's normal development flow.
+You can apply self-contained personal HTML directly inside Colabio using
+**Make it yours**, or use the optional standalone app. A personal view never
+changes a teammate's interface. Shared product changes still go through the
+normal development review.
 
 ## Work from Claude Code or Codex
 

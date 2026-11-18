@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { request as httpRequest } from "node:http";
 import { createPersonalSpaceServer } from "../personal-space.mjs";
-import { withSessionLock } from "../agent.mjs";
+import { withSessionLock, runViewCommand, applicationBase } from "../agent.mjs";
+import { HOSTED_FRAME_CSP, hostedWrapperHtml } from "../hosted-frame.mjs";
 
 async function fixture(work) {
   const calls = [];
@@ -95,4 +96,20 @@ test("serializes agent and personal-view commands without leaving a lock behind"
     await assert.rejects(stat(`${path}.lock`), { code: "ENOENT" });
     await withSessionLock(path, async () => {});
   } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test("publishes hosted code to the connected caller, using the current revision", async () => {
+  const calls = [];
+  const view = { title: "Personal", html: "<h1>Inside Colabio</h1>" };
+  const request = async (...args) => { calls.push(args); return args[1] === "PUT" ? { revision: 4, view } : { revision: 3, view: null }; };
+  await runViewCommand(request, { org: 8 }, "view-apply", view);
+  assert.deepEqual(calls, [["/organizations/8/me/task-space"], ["/organizations/8/me/task-space", "PUT", { expectedRevision: 3, view }]]);
+  assert.throws(() => applicationBase("https://outside.invalid"));
+});
+
+test("hosted frame uses opaque origins and permits no network frame destination", () => {
+  assert.match(HOSTED_FRAME_CSP, /frame-src blob:/);
+  assert.match(HOSTED_FRAME_CSP, /sandbox allow-scripts/);
+  assert.doesNotMatch(HOSTED_FRAME_CSP, /allow-same-origin/);
+  assert.match(hostedWrapperHtml(), /sandbox="allow-scripts"/);
 });

@@ -25,10 +25,20 @@ export function apiBase(value = API) {
 }
 
 /** No mutation is retried except after an authoritative 401, when nothing was authorized. */
-export function createClient(session, saveSession, fetcher = fetch) {
+export function applicationBase(value = "https://www.colabio.org") {
+  const url = new URL(value);
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  if ((!local && !["https://www.colabio.org", "https://colabio.org"].includes(url.origin)) ||
+      (local && !["http:", "https:"].includes(url.protocol)) || url.username || url.password || url.search || url.hash || url.pathname !== "/") throw new Error("Use the Colabio app or an explicit local development app.");
+  return `${url.origin}/api`;
+}
+
+/** @param {string | null} [application] */
+export function createClient(session, saveSession, fetcher = fetch, application = null) {
   const base = apiBase(session.api);
-  async function send(path, method = "GET", body, token = session.accessToken) {
-    return fetcher(`${base}${path}`, {
+  const destination = application === null ? base : applicationBase(application);
+  async function send(path, method = "GET", body, token = session.accessToken, target = destination) {
+    return fetcher(`${target}${path}`, {
       method, headers: { ...HEADERS, Authorization: `Bearer ${token}` },
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
       signal: AbortSignal.timeout(30_000), redirect: "error",
@@ -37,7 +47,7 @@ export function createClient(session, saveSession, fetcher = fetch) {
   return async function request(path, method = "GET", body) {
     let response = await send(path, method, body);
     if (response.status === 401) {
-      const refreshed = await send("/tokens/refresh-token", "POST", undefined, session.refreshToken);
+      const refreshed = await send("/tokens/refresh-token", "POST", undefined, session.refreshToken, base);
       if (!refreshed.ok) throw new Error(refreshed.status === 401 ? "Session ended. Connect the bridge again." : "Could not refresh the connection. Try later; your session was kept.");
       const pair = await refreshed.json();
       if (typeof pair.accessToken !== "string" || !pair.accessToken) throw new Error("The sign-in response was incomplete. Connect again.");
@@ -49,6 +59,20 @@ export function createClient(session, saveSession, fetcher = fetch) {
     if (!response.ok) throw new Error(`Colabio refused the request (${response.status}). No successful change was confirmed.`);
     return response.json();
   };
+}
+
+export async function runViewCommand(request, session, command, options = {}) {
+  const path = `/organizations/${positiveId(session.org)}/me/task-space`;
+  const current = await request(path);
+  if (command === "view-show") return current;
+  if (!["view-apply", "view-reset"].includes(command)) throw new Error("Unknown view command");
+  if (!Number.isSafeInteger(current.revision) || current.revision < 0) throw new Error("Could not read your view's revision.");
+  const view = command === "view-reset" ? null : {
+    title: text(options.title || "My task space", 80, "View title"),
+    html: text(options.html, 200_000, "View HTML"),
+  };
+  const result = await request(path, "PUT", { expectedRevision: current.revision, view });
+  return { revision: result.revision, title: result.view?.title ?? "Colabio view", message: "Saved to your own account. Open or return to the Tasks page inside Colabio; no local app is needed." };
 }
 
 export async function readProject(request, organizationId, projectId) {
@@ -111,9 +135,11 @@ async function savePrivate(path, session) {
 }
 
 const HELP = `Colabio task bridge (Node 22+)
-Commands: connect, serve, list, show, create, start, describe, complete, disconnect
+Commands: connect, view-show, view-apply, view-reset, serve, list, show, create, start, describe, complete, disconnect
 Every command needs --org ID --project ID. Task commands also need --task ID.
 connect: paste a 60-second code from the board into the local prompt (never into chat).
+view-apply: --html-file my-view.html [--view-title "My task space"] (publishes inside Colabio, for you only)
+view-show: read your hosted view; view-reset: restore your hosted Colabio view
 serve: open your own editable task space on this computer [--port 4318]
 create: --title "Specific outcome" [--description-file path] [--allow-duplicate]
 describe: --task ID --description-file path (replaces the description; preserve existing context)
@@ -145,10 +171,11 @@ export async function main(args = process.argv.slice(2)) {
     title: { type: "string" }, "description-file": { type: "string" }, api: { type: "string" },
     verified: { type: "boolean" }, "allow-duplicate": { type: "boolean" },
     port: { type: "string" },
+    "html-file": { type: "string" }, "view-title": { type: "string" }, app: { type: "string" },
   } });
   const command = positionals[0] ?? "help";
   if (command === "help") { process.stdout.write(HELP); return; }
-  if (!["connect", "serve", "disconnect", "list", "show", "create", "start", "describe", "complete"].includes(command)) throw new Error("Unknown command. Run node agent.mjs help.");
+  if (!["connect", "serve", "view-show", "view-apply", "view-reset", "disconnect", "list", "show", "create", "start", "describe", "complete"].includes(command)) throw new Error("Unknown command. Run node agent.mjs help.");
   const org = positiveId(values.org), project = positiveId(values.project);
   const directory = join(homedir(), ".config", "colabio", "task-agent");
   await mkdir(directory, { recursive: true, mode: 0o700 });
@@ -193,8 +220,15 @@ export async function main(args = process.argv.slice(2)) {
       process.stdout.write("Connected. Your agent can now use this project's board with your permissions.\n");
       return;
     }
-    const session = await loadSession(path, org, project);
-    const request = createClient(session, (next) => savePrivate(path, next));
+    let session = await loadSession(path, org, project);
+    const save = async (next) => { session = next; await savePrivate(path, next); };
+    const request = createClient(session, save);
+    if (command.startsWith("view-")) {
+      await readProject(request, org, project);
+      const html = values["html-file"] ? await readFile(resolve(values["html-file"]), "utf8") : undefined;
+      const result = await runViewCommand(createClient(session, save, fetch, values.app || "https://www.colabio.org"), session, command, { html, title: values["view-title"] });
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`); return;
+    }
     const description = values["description-file"] ? await readFile(resolve(values["description-file"]), "utf8") : undefined;
     const result = await runTaskCommand(request, session, command, { ...values, description });
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);

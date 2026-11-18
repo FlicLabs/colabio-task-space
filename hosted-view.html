@@ -1,0 +1,33 @@
+<style>
+  :root{color-scheme:light dark;--bg:#f6f7f4;--card:#fff;--ink:#203027;--muted:#66756b;--line:#dae3dc;--accent:#315c43;font:14px system-ui,sans-serif}
+  :root[data-theme=dark]{--bg:#151c18;--card:#202b24;--ink:#e5eee8;--muted:#adbbb1;--line:#3c4a40;--accent:#b0dbbd}
+  *{box-sizing:border-box}body{margin:0;padding:24px;background:var(--bg);color:var(--ink)}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+  h1{font-size:28px;letter-spacing:-.04em;margin:0 0 8px}p{margin:0;color:var(--muted);line-height:1.6}
+  button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--accent);border-radius:8px;padding:10px 14px}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  #columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:20px}
+  section{min-width:0}h2{font-size:13px;text-transform:uppercase;letter-spacing:.07em;margin:0 0 16px}
+  article{padding:18px;border:1px solid var(--line);border-radius:12px;background:var(--card);margin-bottom:12px;overflow-wrap:anywhere}
+  h3{font-size:16px;margin:0 0 10px;line-height:1.5}article button{margin-top:16px}article p{white-space:pre-wrap}
+</style>
+<header><div><h1 id="project">My task space</h1><p>A clear view of the next outcome. This layout is yours.</p></div><button id="create">New task</button></header>
+<div id="columns"></div>
+<script>
+  document.getElementById('create').onclick = () => window.colabio.createTask();
+  window.colabio.onTasks(model => {
+    document.documentElement.dataset.theme = model.theme;
+    document.getElementById('project').textContent = model.project.name;
+    const board = document.getElementById('columns'); board.replaceChildren();
+    const node = (tag, value) => { const element=document.createElement(tag); element.textContent=value; return element; };
+    for (const [status,title] of [['NOT_STARTED','Up next'],['IN_PROGRESS','Moving forward'],['COMPLETED','Finished']]) {
+      const lane=document.createElement('section'); const tasks=model.tasks.filter(task=>task.status===status);
+      lane.append(node('h2',`${title} · ${tasks.length}`));
+      for (const task of tasks) {
+        const card=document.createElement('article'); card.append(node('h3',task.name),node('p',task.description || 'Open this task to describe the outcome.'));
+        const open=node('button','Open task'); open.onclick=()=>window.colabio.openTask(task.id); card.append(open); lane.append(card);
+      }
+      if (!tasks.length) lane.append(node('p','Room for your next outcome.')); board.append(lane);
+    }
+  });
+</script>
