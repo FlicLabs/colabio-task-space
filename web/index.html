@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="task-space-connection" content="{{nonce}}">
+  <title>My Colabio task space</title>
+  <link rel="stylesheet" href="/task-space.css">
+  <script type="module" src="/task-space.js"></script>
+</head>
+<body>
+  <header>
+    <div><p class="eyebrow">COLABIO · YOUR OWN VERSION</p><h1>Your work, your way.</h1>
+      <p>Your layout is local to this copy. Task updates sync to your shared Colabio board.</p>
+      <p class="scope">Organization {{org}} · Project {{project}}</p>
+    </div>
+    <a href="https://github.com/FlicLabs/colabio-task-space" target="_blank" rel="noopener noreferrer">Source & customization guide ↗</a>
+  </header>
+  <main>
+    <div class="toolbar">
+      <label>Find a task <input id="search" type="search" placeholder="Search your work"></label>
+      <label>Layout <select id="layout" aria-label="Layout"><option value="columns">Kanban columns</option><option value="stack">Stacked sections</option></select></label>
+      <button id="refresh" type="button">Refresh</button>
+      <button id="add" type="button" class="primary">New task</button>
+    </div>
+    <p id="notice" role="status" aria-live="polite"></p>
+    <p id="error" role="alert"></p>
+    <div id="board" class="board" aria-label="Project tasks"></div>
+    <footer>Make it yours: ask your agent to edit <code>web/task-space.js</code>, <code>web/task-space.css</code>, and <code>web/index.html</code> in your own copy, then refresh. This does not change anyone else’s layout.</footer>
+  </main>
+  <dialog id="editor">
+    <form id="task-form">
+      <h2 id="editor-title">New task</h2>
+      <p>Share a clear outcome. Leave private conversation and credentials out of the task.</p>
+      <label id="title-field">Task name <input id="task-title" maxlength="255" required></label>
+      <label>Outcome and progress <textarea id="task-description" rows="6" maxlength="2000"></textarea></label>
+      <p id="editor-error" role="alert"></p>
+      <div class="dialog-actions"><button id="cancel" type="button">Cancel</button><button id="save" class="primary" type="submit">Save task</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
