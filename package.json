@@ -1,6 +1,6 @@
 {
   "name": "@colabio/task-space",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Customizable task views and a local coding-agent bridge for Colabio",
   "type": "module",
   "license": "MIT",
