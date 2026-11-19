@@ -44,6 +44,25 @@ with owner-only file permissions. Revoke its device in Colabio's My Account →
 Devices & sessions to end server access. `disconnect` only removes the local copy.
 For development, `connect` accepts `--api http://localhost:8080/api/v1`.
 
+## Work on a task as a prompt
+
+Colabio Tasks → Run as prompt prepares a separate, personal run ID. For each
+run, use the connection arguments provided in its prompt, with `--run UUID`.
+
+- `run-show` reads its current task, state and assignment history.
+- `run-start` confirms work started after the user submits the prompt.
+- `run-switch --task TASK_ID [--to-project PROJECT_ID]` moves just this run.
+  Look for an existing task that matches the work before switching. Use the
+  new project's ID when it differs from the run's current project. Colabio
+  verifies that the signed-in member has access to that task.
+- `run-finish` ends this run. Use the separate task commands when authorized
+  to update the shared task itself.
+
+A run move records the old and new task and when the move happened. Parallel
+runs can refer to different tasks, or to the same high-level task. No run action
+starts tracked time. If the bridge is unavailable, tell the person which task
+the run belongs to. They can update it in Agent runs on the Tasks page.
+
 ## Keep the work and board together
 
 Replace ORG_ID and PROJECT_ID with the connected scope in every command.

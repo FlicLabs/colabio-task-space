@@ -75,6 +75,27 @@ export async function runViewCommand(request, session, command, options = {}) {
   return { revision: result.revision, title: result.view?.title ?? "Colabio view", message: "Saved to your own account. Open or return to the Tasks page inside Colabio; no local app is needed." };
 }
 
+export async function runAgentRunCommand(request, session, command, options) {
+  const id = options.run;
+  if (typeof id !== "string" || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) {
+    throw new Error("Use the run ID from the Colabio prompt.");
+  }
+  const path = `/organizations/${positiveId(session.org)}/me/task-runs`;
+  const current = await request(`${path}?run=${id}`);
+  if (command === "run-show") return current;
+  if (!Number.isSafeInteger(current.revision) || current.revision < 1 || current.id !== id) {
+    throw new Error("Could not read the current Colabio run.");
+  }
+  const action = command.slice(4);
+  if (!["start", "switch", "finish"].includes(action)) throw new Error("Unknown run command.");
+  const update = { action, runId: id, revision: current.revision };
+  if (action === "switch") {
+    update.projectId = positiveId(options["to-project"] ?? current.task.projectId);
+    update.taskId = positiveId(options.task);
+  }
+  return request(path, "POST", update);
+}
+
 export async function readProject(request, organizationId, projectId) {
   const project = await request(`/projects/${positiveId(projectId)}/get?view=board`);
   if (project.organizationId !== positiveId(organizationId) || project.id !== Number(projectId) || !Array.isArray(project.tasks)) {
@@ -144,6 +165,8 @@ serve: open your own editable task space on this computer [--port 4318]
 create: --title "Specific outcome" [--description-file path] [--allow-duplicate]
 describe: --task ID --description-file path (replaces the description; preserve existing context)
 complete: --task ID --verified (only after verifying the work)
+run-show, run-start, run-finish: --run UUID from the Colabio prompt
+run-switch: --run UUID --task ID [--to-project ID] (moves this run and records the prior task)
 An independent account session is kept in ~/.config/colabio/task-agent with owner-only permissions.
 disconnect removes the local credentials; revoke the device in Colabio to end server access.
 No time is tracked by this bridge. Board updates use your existing permissions.
@@ -167,7 +190,7 @@ async function loadSession(path, org, project) {
 
 export async function main(args = process.argv.slice(2)) {
   const { values, positionals } = parseArgs({ args, allowPositionals: true, options: {
-    org: { type: "string" }, project: { type: "string" }, task: { type: "string" },
+    org: { type: "string" }, project: { type: "string" }, task: { type: "string" }, run: { type: "string" }, "to-project": { type: "string" },
     title: { type: "string" }, "description-file": { type: "string" }, api: { type: "string" },
     verified: { type: "boolean" }, "allow-duplicate": { type: "boolean" },
     port: { type: "string" },
@@ -175,7 +198,7 @@ export async function main(args = process.argv.slice(2)) {
   } });
   const command = positionals[0] ?? "help";
   if (command === "help") { process.stdout.write(HELP); return; }
-  if (!["connect", "serve", "view-show", "view-apply", "view-reset", "disconnect", "list", "show", "create", "start", "describe", "complete"].includes(command)) throw new Error("Unknown command. Run node agent.mjs help.");
+  if (!["connect", "serve", "view-show", "view-apply", "view-reset", "disconnect", "list", "show", "create", "start", "describe", "complete", "run-show", "run-start", "run-switch", "run-finish"].includes(command)) throw new Error("Unknown command. Run node agent.mjs help.");
   const org = positiveId(values.org), project = positiveId(values.project);
   const directory = join(homedir(), ".config", "colabio", "task-agent");
   await mkdir(directory, { recursive: true, mode: 0o700 });
@@ -223,6 +246,12 @@ export async function main(args = process.argv.slice(2)) {
     let session = await loadSession(path, org, project);
     const save = async (next) => { session = next; await savePrivate(path, next); };
     const request = createClient(session, save);
+    if (command.startsWith("run-")) {
+      const app = createClient(session, save, fetch, values.app || "https://www.colabio.org");
+      const result = await runAgentRunCommand(app, session, command, values);
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      return;
+    }
     if (command.startsWith("view-")) {
       await readProject(request, org, project);
       const html = values["html-file"] ? await readFile(resolve(values["html-file"]), "utf8") : undefined;
