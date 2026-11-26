@@ -1,5 +1,7 @@
 # Working with this task space
 
+Security maintenance: read [SECURITY.md](SECURITY.md) for the published package patch, verification limits and contribution safeguards.
+
 ## Default: customize INSIDE Colabio
 
 For personal customization, read `HOSTED.md` and start from `hosted-view.html`.
