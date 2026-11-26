@@ -1,5 +1,7 @@
 # Colabio task space
 
+Security maintenance: read [SECURITY.md](SECURITY.md) for the published package patch, verification limits and contribution safeguards.
+
 An editable task-space layout and a local agent bridge, released under the MIT
 license. This package contains no Colabio credentials or customer data. Its license
 applies only to this folder.
